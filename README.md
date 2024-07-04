@@ -25,6 +25,7 @@
 - [About project](#about-project)
 - [Building](#building)
 - [Running](#running)
+- [Known issues](#known-issues)
 
 ## About project
 That's small ELF header parser, written in 10 minutes. I used only my [friend's blog](https://deluks2006.github.io/posts/the-elf-format/) about ELF headers. [His github](https://github.com/DeLuks2006). He'd appreciate any help.
@@ -37,3 +38,6 @@ To run program and read ELF header, run this:
 ```
 ./a.out <program>
 ```
+
+## Known issues
+As PIEs are shared objects, program reads them as shared objects. To make non-PIE executable, use `-no-pie` GCC flag. No idea how to fix that right now, so any help will be appreciated.
