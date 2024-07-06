@@ -5,7 +5,8 @@
 #define ELF_MAGIC 0x464C457F
 
 struct ELF64_Header {
-    unsigned char e_ident[16];
+    uint32_t e_magic;
+    unsigned char e_ident[12];
     uint16_t e_type;
     uint16_t e_machine;
     uint32_t e_version;
@@ -46,36 +47,22 @@ int main(int argc, char *argv[]) {
         puts("Invalid usage! Please, provide only one file to parse.");
         return EXIT_FAILURE;
     }
-
+    struct ELF64_Header hdr;
+    
     FILE* f = fopen(argv[1], "rb");
     if (!f) {
         puts("Failed to open file!");
         return EXIT_FAILURE;
     }
 
-    fseek(f, 0, SEEK_END);
-    uint64_t len = ftell(f);
-    rewind(f);
+    fread(&hdr, sizeof(struct ELF64_Header), 1, f);
 
-    if (len < sizeof(struct ELF64_Header)){
-        puts("Invalid file: invalid size");
-        return EXIT_FAILURE;
-    }
-
-    struct ELF64_Header *hdr = malloc(sizeof(struct ELF64_Header));
-    if (!hdr) {
-        puts("Failed to allocate memory!");
+    if (hdr.e_magic != ELF_MAGIC) {
+        puts("Invalid file: bad magic");
         goto close;
     }
 
-    fread(hdr, sizeof(struct ELF64_Header), 1, f);
-
-    if (*((uint32_t*)&hdr->e_ident) != ELF_MAGIC) {
-        puts("Invalid file: bad magic");
-        goto mem_free;
-    }
-
-    switch (hdr->e_ident[4]) {
+    switch (hdr.e_ident[0]) {
         case BITS32:
             puts("Binary format: 32 bit");
             break;
@@ -84,10 +71,10 @@ int main(int argc, char *argv[]) {
             break;
         default:
             puts("Invalid binary format!");
-            goto mem_free;
+            goto close;
     }
 
-    switch (hdr->e_ident[5]) {
+    switch (hdr.e_ident[1]) {
         case LITTLE:
             puts("Endianess: little endian");
             break;
@@ -96,10 +83,10 @@ int main(int argc, char *argv[]) {
             break;
         default:
             puts("Invalid endianess!");
-            goto mem_free;
+            goto close;
     }
 
-    switch (hdr->e_ident[8]) {
+    switch (hdr.e_ident[4]) {
         case LINUX:
             puts("Target OS: Linux");
             break;
@@ -111,7 +98,7 @@ int main(int argc, char *argv[]) {
             break;
     }
 
-    switch (hdr->e_type) {
+    switch (hdr.e_type) {
         case EXECUTABLE:
             puts("File type: executable");
             break;
@@ -120,20 +107,17 @@ int main(int argc, char *argv[]) {
             break;
         default:
             puts("Invalid file type!");
-            goto mem_free;
+            goto close;
     }
 
-    printf("Entry point: 0x%lX\n", hdr->e_entry);
-    printf("Program header offset: 0x%lX\n", hdr->e_phoff);
-    printf("Section header offset: 0x%lX\n", hdr->e_shoff);
-    printf("ELF header size: 0x%X\n", hdr->e_ehsize);
-    printf("Program header entry size: 0x%X\n", hdr->e_phentsize);
-    printf("Section header entry size: 0x%X\n", hdr->e_shentsize);
-    printf("Count of section header entries: 0x%X\n", hdr->e_shnum);
-
-
-mem_free:
-    free(hdr);
+    printf("Architecture hex code: %X\n", hdr.e_machine);
+    printf("Entry point: 0x%lX\n", hdr.e_entry);
+    printf("Program header offset: 0x%lX\n", hdr.e_phoff);
+    printf("Section header offset: 0x%lX\n", hdr.e_shoff);
+    printf("ELF header size: 0x%X\n", hdr.e_ehsize);
+    printf("Program header entry size: 0x%X\n", hdr.e_phentsize);
+    printf("Section header entry size: 0x%X\n", hdr.e_shentsize);
+    printf("Count of section header entries: 0x%X\n", hdr.e_shnum);
 
 close:
     fclose(f);
